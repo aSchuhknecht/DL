@@ -2,11 +2,24 @@ import torch
 
 
 class CNNClassifier(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """
         Your code here
         """
-        raise NotImplementedError('CNNClassifier.__init__')
+        super().__init__(*args, **kwargs)
+
+        c = 3
+        lay = 32
+        kern = 3
+        layers = []
+
+        layers.append(torch.nn.Conv2d(c, lay, kernel_size=(kern, kern)))
+        layers.append(torch.nn.ReLU())
+        layers.append(torch.nn.Conv2d(lay, 6, kernel_size=(1, 1)))
+
+        self.network = torch.nn.Sequential(*layers)
+
+        # raise NotImplementedError('CNNClassifier.__init__')
 
     def forward(self, x):
         """
@@ -14,7 +27,9 @@ class CNNClassifier(torch.nn.Module):
         @x: torch.Tensor((B,3,64,64))
         @return: torch.Tensor((B,6))
         """
-        raise NotImplementedError('CNNClassifier.forward')
+
+        return self.network(x)
+        # raise NotImplementedError('CNNClassifier.forward')
 
 
 def save_model(model):

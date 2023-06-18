@@ -1,6 +1,7 @@
 from os import path
 import torch
 import torch.utils.tensorboard as tb
+import numpy as np
 
 
 def test_logging(train_logger, valid_logger):
@@ -14,17 +15,32 @@ def test_logging(train_logger, valid_logger):
     """
 
     # This is a strongly simplified training loop
+    global_step = 0
     for epoch in range(10):
         torch.manual_seed(epoch)
+        acc1 = []
         for iteration in range(20):
             dummy_train_loss = 0.9**(epoch+iteration/20.)
             dummy_train_accuracy = epoch/10. + torch.randn(10)
-            raise NotImplementedError('Log the training loss')
-        raise NotImplementedError('Log the training accuracy')
+            acc1.append(torch.mean(dummy_train_accuracy))
+
+            train_logger.add_scalar('loss', dummy_train_loss, global_step=global_step)
+            global_step += 1
+            # raise NotImplementedError('Log the training loss')
+
+        train_logger.add_scalar('accuracy', np.mean(acc1), global_step=global_step)
+        # raise NotImplementedError('Log the training accuracy')
+
         torch.manual_seed(epoch)
+        acc2 = []
         for iteration in range(10):
             dummy_validation_accuracy = epoch / 10. + torch.randn(10)
-        raise NotImplementedError('Log the validation accuracy')
+            acc2.append(torch.mean(dummy_validation_accuracy))
+
+        valid_logger.add_scalar('accuracy', np.mean(acc2), global_step=global_step)
+
+
+        # raise NotImplementedError('Log the validation accuracy')
 
 
 if __name__ == "__main__":
