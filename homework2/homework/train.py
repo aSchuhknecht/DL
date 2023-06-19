@@ -7,7 +7,11 @@ import numpy as np
 
 def train(args):
     from os import path
-    model = CNNClassifier()
+
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    print(device)
+
+    model = CNNClassifier().to(device)
     train_logger, valid_logger = None, None
 
     if args.log_dir is not None:
@@ -31,6 +35,8 @@ def train(args):
 
     for epoch in range(0, n_epochs):
         for step, (data, labels) in enumerate(train_dataloader):
+
+            data, labels = data.to(device), labels.to(device)
 
             o = model(data)
             # print(o.size())
