@@ -23,7 +23,7 @@ def train(args):
     
     """
 
-    n_epochs = 50
+    n_epochs = 500
     batch_size = 128
 
     train_dataloader = load_data('data/train')
@@ -43,7 +43,7 @@ def train(args):
             # print(o)
 
             loss = ClassificationLoss()(o, labels)
-            acc.append(accuracy(o, labels))
+            acc.append(accuracy(o, labels).detach().cpu().numpy())
 
             train_logger.add_scalar('loss', float(1), global_step=global_step)
 
@@ -54,11 +54,14 @@ def train(args):
             global_step += 1
 
         train_logger.add_scalar('accuracy', np.mean(acc), global_step=global_step)
-        print(np.mean(acc))
+        print('train: ', np.mean(acc))
 
         valid_data, valid_labels = next(iter(valid_dataloader))
+        valid_data, valid_labels = valid_data.to(device), valid_labels.to(device)
+
         valid_pred = model(valid_data)
-        valid_acc = accuracy(valid_pred, valid_labels)
+        valid_acc = float(accuracy(valid_pred, valid_labels))
+        print('valid: ', valid_acc)
 
         valid_logger.add_scalar('accuracy', valid_acc, global_step=global_step)
 
