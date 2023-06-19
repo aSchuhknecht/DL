@@ -23,7 +23,7 @@ def train(args):
     
     """
 
-    n_epochs = 500
+    n_epochs = 150
     batch_size = 128
 
     train_dataloader = load_data('data/train')
