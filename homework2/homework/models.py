@@ -24,23 +24,49 @@ class ClassificationLoss(torch.nn.Module):
 
 
 class CNNClassifier(torch.nn.Module):
-    def __init__(self, *args, **kwargs):
+
+    class Block(torch.nn.Module):
+        def __init__(self, n_input, n_output, stride=1):
+            super().__init__()
+            self.net = torch.nn.Sequential(
+                torch.nn.Conv2d(n_input, n_output, kernel_size=(3, 3), padding=1, stride=(stride, stride)),
+                torch.nn.ReLU(),
+                torch.nn.Conv2d(n_input, n_output, kernel_size=(3, 3), padding=1),
+                torch.nn.ReLU()
+            )
+
+        def forward(self, x):
+            return self.net(x)
+
+    def __init__(self, layers=None, n_input_channels=3):
         """
         Your code here
         """
-        super().__init__(*args, **kwargs)
+        super().__init__()
+        if layers is None:
+            layers = [64, 64, 64]
 
-        c = 3
-        lay = 32
-        kern = 3
-        layers = []
+        # c = 3
+        # lay = 32
+        # kern = 3
+        # layers = []
+        #
+        # layers.append(torch.nn.Conv2d(c, lay, kernel_size=(kern, kern)))
+        # layers.append(torch.nn.ReLU())
+        # layers.append(torch.nn.Conv2d(lay, lay, kernel_size=(1, 1)))
 
-        layers.append(torch.nn.Conv2d(c, lay, kernel_size=(kern, kern)))
-        layers.append(torch.nn.ReLU())
-        layers.append(torch.nn.Conv2d(lay, lay, kernel_size=(1, 1)))
+        L = [
+            torch.nn.Conv2d(n_input_channels, 64, kernel_size=(7, 7), padding=3, stride=(2, 2)),
+            torch.nn.ReLU(),
+            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        ]
+        c = 64
+        for lay in layers:
+            L.append(self.Block(c, lay, stride=2))
+            c = lay
 
-        self.network = torch.nn.Sequential(*layers)
-        self.classifier = torch.nn.Linear(lay, 6)
+        self.network = torch.nn.Sequential(*L)
+        self.classifier = torch.nn.Linear(c, 6)
 
         # raise NotImplementedError('CNNClassifier.__init__')
 
