@@ -14,7 +14,7 @@ DENSE_CLASS_DISTRIBUTION = [0.52683655, 0.02929112, 0.4352989, 0.0044619, 0.0041
 
 
 class SuperTuxDataset(Dataset):
-    def __init__(self, dataset_path):
+    def __init__(self, dataset_path, transform=None):
         """
         Your code here
         Hint: Use your solution (or the master solution) to HW1 / HW2
@@ -24,6 +24,7 @@ class SuperTuxDataset(Dataset):
               for most transformations.
         """
         self.data = []
+        self.transform = transform
         label_path = dataset_path + '/labels.csv'
 
         with open(label_path, mode='r')as file:
@@ -40,18 +41,21 @@ class SuperTuxDataset(Dataset):
 
                 img_path = dataset_path + '/' + lines[0]
                 img = Image.open(img_path)
+                img.load()
 
-                t1 = transforms.ToTensor()
-                t2 = transforms.ColorJitter(brightness=(0.5, 1.5), contrast=(1), saturation=(0.5, 1.5), hue=(-0.1, 0.1))
-                t3 = transforms.Compose([
-                    t2,
-                    transforms.RandomHorizontalFlip(),
-                    t1
-                ])
 
-                tens = t3(img)
-                tup = (tens, label_to_int(lines[1]))
+                # t1 = transforms.ToTensor()
+                # t2 = transforms.ColorJitter(brightness=(0.5, 1.5), contrast=(1), saturation=(0.5, 1.5), hue=(-0.1, 0.1))
+                # t3 = transforms.Compose([
+                #     t2,
+                #     transforms.RandomHorizontalFlip(),
+                #     t1
+                # ])
+
+                # tens = t1(img)
+                tup = (img, label_to_int(lines[1]))
                 self.data.append(tup)
+                # img.close()
 
             self.length = i - 1
 
@@ -68,9 +72,16 @@ class SuperTuxDataset(Dataset):
         """
         Your code here
         """
-        return self.data[idx]
+        item = self.data[idx][0]
+        lbl = self.data[idx][1]
+        if self.transform is None:
+            self.transform = transforms.ToTensor()
+            return self.transform(item), lbl
+        else:
+            item = self.transform(item)
+            return item, lbl
         # raise NotImplementedError('SuperTuxDataset.__getitem__')
-        # return img, label
+
 
 
 class DenseSuperTuxDataset(Dataset):

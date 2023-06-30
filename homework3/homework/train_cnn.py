@@ -4,6 +4,7 @@ import torch
 import torchvision
 import torch.utils.tensorboard as tb
 import numpy as np
+from torchvision import transforms
 
 
 def train(args):
@@ -25,7 +26,13 @@ def train(args):
     n_epochs = 100
     batch_size = 128
 
-    train_dataloader = load_data('data/train')
+    trans = transforms.Compose([
+        transforms.ColorJitter(brightness=(0.5, 1.5), contrast=(1), saturation=(0.5, 1.5), hue=(-0.1, 0.1)),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor()
+    ])
+
+    train_dataloader = load_data('data/train', num_workers=0, batch_size=128, transform=trans)
     valid_dataloader = load_data('data/valid')
 
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
