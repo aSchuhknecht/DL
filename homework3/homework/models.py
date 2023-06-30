@@ -28,8 +28,10 @@ class CNNClassifier(torch.nn.Module):
             super().__init__()
             self.net = torch.nn.Sequential(
                 torch.nn.Conv2d(n_input, n_output, kernel_size=(3, 3), padding=1, stride=(stride, stride)),
+                torch.nn.BatchNorm2d(n_output),
                 torch.nn.ReLU(),
                 torch.nn.Conv2d(n_input, n_output, kernel_size=(3, 3), padding=1),
+                torch.nn.BatchNorm2d(n_output),
                 torch.nn.ReLU()
             )
 
@@ -55,6 +57,7 @@ class CNNClassifier(torch.nn.Module):
 
         L = [
             torch.nn.Conv2d(n_input_channels, 64, kernel_size=(7, 7), padding=3, stride=(2, 2)),
+            torch.nn.BatchNorm2d(64),
             torch.nn.ReLU(),
             torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         ]
