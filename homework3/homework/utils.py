@@ -40,9 +40,16 @@ class SuperTuxDataset(Dataset):
 
                 img_path = dataset_path + '/' + lines[0]
                 img = Image.open(img_path)
-                im_tensor = transforms.ToTensor()
-                tens = im_tensor(img)
 
+                t1 = transforms.ToTensor()
+                t2 = transforms.ColorJitter(brightness=(0.5, 1.5), contrast=(1), saturation=(0.5, 1.5), hue=(-0.1, 0.1))
+                t3 = transforms.Compose([
+                    t2,
+                    transforms.RandomHorizontalFlip(),
+                    t1
+                ])
+
+                tens = t3(img)
                 tup = (tens, label_to_int(lines[1]))
                 self.data.append(tup)
 
