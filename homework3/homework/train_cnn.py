@@ -28,7 +28,8 @@ def train(args):
     train_dataloader = load_data('data/train')
     valid_dataloader = load_data('data/valid')
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
+    # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-4)
     global_step = 0
     acc = []
 
