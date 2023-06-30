@@ -1,13 +1,18 @@
-from .models import CNNClassifier, save_model
-from .utils import ConfusionMatrix, load_data, LABEL_NAMES
+from .models import CNNClassifier, save_model, ClassificationLoss
+from .utils import ConfusionMatrix, load_data, LABEL_NAMES, accuracy
 import torch
 import torchvision
 import torch.utils.tensorboard as tb
+import numpy as np
 
 
 def train(args):
     from os import path
-    model = CNNClassifier()
+
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    print(device)
+
+    model = CNNClassifier().to(device)
     train_logger, valid_logger = None, None
     if args.log_dir is not None:
         train_logger = tb.SummaryWriter(path.join(args.log_dir, 'train'), flush_secs=1)
@@ -16,6 +21,49 @@ def train(args):
     """
     Your code here, modify your HW1 / HW2 code
     """
+
+    n_epochs = 150
+    batch_size = 128
+
+    train_dataloader = load_data('data/train')
+    valid_dataloader = load_data('data/valid')
+
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
+    global_step = 0
+    acc = []
+
+    for epoch in range(0, n_epochs):
+        for step, (data, labels) in enumerate(train_dataloader):
+
+            data, labels = data.to(device), labels.to(device)
+
+            o = model(data)
+            # print(o.size())
+            # print(o)
+
+            loss = ClassificationLoss()(o, labels)
+            acc.append(accuracy(o, labels).detach().cpu().numpy())
+
+            train_logger.add_scalar('loss', float(1), global_step=global_step)
+
+            optimizer.zero_grad()
+            loss.backward()
+
+            optimizer.step()
+            global_step += 1
+
+        train_logger.add_scalar('accuracy', np.mean(acc), global_step=global_step)
+        print('train: ', np.mean(acc))
+
+        valid_data, valid_labels = next(iter(valid_dataloader))
+        valid_data, valid_labels = valid_data.to(device), valid_labels.to(device)
+
+        valid_pred = model(valid_data)
+        valid_acc = float(accuracy(valid_pred, valid_labels))
+        print('valid: ', valid_acc)
+
+        valid_logger.add_scalar('accuracy', valid_acc, global_step=global_step)
+
     save_model(model)
 
 
