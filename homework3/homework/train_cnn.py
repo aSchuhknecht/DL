@@ -47,7 +47,7 @@ def train(args):
 
             o = model(data)
             # print(o.size())
-            # print(o)
+            # print(labels.size())
 
             loss = ClassificationLoss()(o, labels)
             acc.append(accuracy(o, labels).detach().cpu().numpy())

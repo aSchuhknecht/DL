@@ -51,17 +51,17 @@ def train(args):
             data, labels = data.to(device), labels.to(device)
 
             output = model(data)
-            # print(labels.size())
-            # print(output.argmax(1).size())
+            print(output.size())
+            print(labels.size())
 
             # print(output.argmax(1))
             # print(labels)
             # print(o)
 
-            loss = ClassificationLoss()(output.argmax(1).float(), labels.float())
+            loss = ClassificationLoss()(output, labels.long())
 
             optimizer.zero_grad()
-            loss.requires_grad = True
+            #  loss.requires_grad = True
             loss.backward()
 
             confusionMatrix = ConfusionMatrix()
