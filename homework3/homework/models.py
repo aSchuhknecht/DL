@@ -168,7 +168,7 @@ class FCN(torch.nn.Module):
 
         self.UpBlock1 = self.UpBlock(128, 64, stride=2)
         self.UpBlock2 = self.UpBlock(64*2, 32, stride=2)
-        self.UpBlock3 = self.UpBlock(32, 5, stride=2)
+        self.UpBlock3 = self.UpBlock(32*2, 5, stride=2)
         # self.classifier = torch.nn.Linear(c, 6)
 
         # raise NotImplementedError('FCN.__init__')
@@ -199,8 +199,8 @@ class FCN(torch.nn.Module):
         u1 = torch.cat((u1, d2), dim=1)  # skip connection
 
         u2 = self.UpBlock2(u1)
-        u2 = u2[:, :, :d2_in[2], :d1_in[3]]
-        # u2 = torch.cat((u2, d1), dim=1)  # skip connection
+        u2 = u2[:, :, :d2_in[2], :d2_in[3]]
+        u2 = torch.cat((u2, d1), dim=1)  # skip connection
 
         u3 = self.UpBlock3(u2)
         u3 = u3[:, :, :d1_in[2], :d1_in[3]]

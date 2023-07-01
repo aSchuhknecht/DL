@@ -28,7 +28,7 @@ def train(args):
     Hint: Use the log function below to debug and visualize your model
     """
 
-    n_epochs = 10
+    n_epochs = 33
     batch_size = 128
 
     trans = dense_transforms.Compose([
@@ -42,6 +42,8 @@ def train(args):
 
     #  optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=30)
+
     global_step = 0
     acc = []
     iou = []
@@ -81,6 +83,7 @@ def train(args):
 
         print('train accuracy: ', np.mean(acc))
         print('train iou: ', np.mean(iou))
+        scheduler.step(np.mean(iou))
 
         valid_data, valid_labels = next(iter(valid_dataloader))
         valid_data, valid_labels = valid_data.to(device), valid_labels.to(device)
