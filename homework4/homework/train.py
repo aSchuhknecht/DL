@@ -59,7 +59,7 @@ def train(args):
             data, labels = data.to(device), labels.to(device)
 
             output = model(data)
-            # print(labels.size())
+            print(output)
 
             # print(output.argmax(1))
             # print(labels)
