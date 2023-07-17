@@ -25,7 +25,7 @@ def train(args):
     Hint: Use the log function below to debug and visualize your model
     """
 
-    n_epochs = 1
+    n_epochs = 5
     batch_size = 128
     loss = torch.nn.CrossEntropyLoss().to(device)
 
@@ -59,7 +59,7 @@ def train(args):
             data, labels = data.to(device), labels.to(device)
 
             output = model(data)
-            print(output)
+            #print(output)
 
             # print(output.argmax(1))
             # print(labels)
