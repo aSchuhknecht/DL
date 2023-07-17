@@ -52,7 +52,7 @@ def train(args):
 
         model.train()
         # confusionMatrix = ConfusionMatrix()
-        for step, (data, labels) in enumerate(train_dataloader):
+        for step, (data, labels, sz) in enumerate(train_dataloader):
             data, labels = data.to(device), labels.to(device)
 
             output = model(data)
@@ -67,14 +67,14 @@ def train(args):
             loss_val = loss(output, labels)
 
             optimizer.zero_grad()
-            loss.backward()
+            loss_val.backward()
 
             # confusionMatrix.add(output.argmax(1).detach().cpu(), labels.detach().cpu())
 
             # acc.append(accuracy(o, labels).detach().cpu().numpy())
             # acc.append(confusionMatrix.global_accuracy)
             # iou.append(confusionMatrix.iou)
-            print('loss: ', loss_val)
+            # print('loss: ', loss_val)
 
             train_logger.add_scalar('loss', float(1), global_step=global_step)
 

@@ -34,7 +34,6 @@ def extract_peak(heatmap, max_pool_ks=7, min_score=-5, max_det=100):
        @return: List of peaks [(score, cx, cy), ...], where cx, cy are the position of a peak and score is the
                 heatmap value at the peak. Return no more than max_det peaks per image
     """
-
     pad = math.floor(max_pool_ks/2)
 
     hm = heatmap[None, None]
@@ -56,7 +55,7 @@ def extract_peak(heatmap, max_pool_ks=7, min_score=-5, max_det=100):
         num_max = max_det
     values, indices = torch.topk(out_flat, num_max)
 
-    values,  indices = values.numpy(), indices.numpy()
+    # values, indices = values.numpy(), indices.numpy()
 
     num_cols = heatmap.size(1)
 
@@ -65,9 +64,10 @@ def extract_peak(heatmap, max_pool_ks=7, min_score=-5, max_det=100):
         cx = indices[i] % num_cols
         cy = indices[i] // num_cols
 
-        tup = (values[i], cx, cy)
+        tup = (values[i].detach().numpy().item(), cx.detach().numpy().item(), cy.detach().numpy().item())
         scores.append(tup)
 
+    # print(scores)
     return scores
     # raise NotImplementedError('extract_peak')
 
@@ -175,7 +175,8 @@ class Detector(torch.nn.Module):
         u3 = self.UpBlock3(u2)
         u3 = u3[:, :, :d1_in[2], :d1_in[3]]
 
-        return torch.nn.Sigmoid(u3)
+        return u3
+        # return torch.nn.Sigmoid(u3)
         # raise NotImplementedError('Detector.forward')
 
     def detect(self, image):
@@ -191,15 +192,28 @@ class Detector(torch.nn.Module):
                  scalar. Otherwise pytorch might keep a computation graph in the background and your program will run
                  out of memory.
         """
+        self.eval()
 
+        image = image[None]
         result = self.forward(image)
-        t1 = extract_peak(result[0], max_det=30)
+        result = result.squeeze()
 
+        t1 = extract_peak(result[0, :, :], max_det=30)
+        t2 = extract_peak(result[1, :, :], max_det=30)
+        t3 = extract_peak(result[2, :, :], max_det=30)
 
-        t2 = extract_peak(result[1], max_det=30)
-        t3 = extract_peak(result[2], max_det=30)
+        r1, r2, r3 = [], [], []
+        for i in range(0, len(t1)):
+            tup = t1[i] + (0.0, 0.0)
+            r1. append(tup)
+        for i in range(0, len(t2)):
+            tup = t2[i] + (0.0, 0.0)
+            r2.append(tup)
+        for i in range(0, len(t3)):
+            tup = t3[i] + (0.0, 0.0)
+            r3.append(tup)
 
-        return extract_peak(result[0]), extract_peak(result[1]), extract_peak(result[2])
+        return r1, r2, r3
 
         # raise NotImplementedError('Detector.detect')
 
