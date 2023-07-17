@@ -53,28 +53,48 @@ def extract_peak(heatmap, max_pool_ks=7, min_score=-5, max_det=100):
     hm_flat = hm_flat.to(device)
     out_flat = out_flat.to(device)
 
-    num_max = 0
-    for i in range(0, hm_flat.size(0)):
-        if hm_flat[i] != out_flat[i] or out_flat[i] <= min_score:
-            out_flat[i] = float('-inf')
-        else:
-            num_max = num_max + 1
-
+    # num_max = 0
+    # for i in range(0, hm_flat.size(0)):
+    #     if hm_flat[i] != out_flat[i] or out_flat[i] <= min_score:
+    #         out_flat[i] = float('-inf')
+    #         x = 2
+    #     else:
+    #         num_max = num_max + 1
+    #
+    # if num_max > max_det:
+    #     num_max = max_det
     # print(num_max)
+    #
+    # values0, indices0 = torch.topk(out_flat, num_max)
+    # print(indices0)
+
+    mask = torch.eq(hm, out)
+    # print(hm)
+    # print(out)
+    # print(mask)
+
+    res = torch.masked_select(hm, mask)
+    res = torch.where(res > min_score, res, 0)
+    res2 = hm.masked_fill(mask == 0, 0.0)
+    # res2 = torch.where(res2 > min_score, res2, 0)
+
+    num_max = torch.count_nonzero(res).numpy().item()
     if num_max > max_det:
         num_max = max_det
-    values, indices = torch.topk(out_flat, num_max)
+    # print(num_max)
 
-    # values, indices = values.numpy(), indices.numpy()
+    values1, indices1 = torch.topk(res2.flatten(), num_max)
+    # print(indices1)
 
     num_cols = heatmap.size(1)
 
     scores = []
     for i in range(0, num_max):
-        cx = indices[i] % num_cols
-        cy = indices[i] // num_cols
+        cx = indices1[i] % num_cols
+        cy = indices1[i] // num_cols
 
-        tup = (values[i].detach().numpy().item(), cx.detach().numpy().item(), cy.detach().numpy().item())
+        tup = (values1[i].detach().numpy().item(), cx.detach().numpy().item(), cy.detach().numpy().item())
+        # tup = (values1[i], cx, cy)
         scores.append(tup)
 
     # print(scores)
