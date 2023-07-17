@@ -68,8 +68,7 @@ def train(args):
 
             # loss = ClassificationLoss()(output, labels.long())
             # loss_val = loss(output, labels)
-            p = torch.sigmoid(output)
-            focal = -alpha * (1 - p) ** gamma * torch.log(p)
+            focal = torchvision.ops.sigmoid_focal_loss(output, labels, reduction='mean')
             print(focal)
 
             optimizer.zero_grad()
