@@ -25,7 +25,7 @@ def train(args):
     Hint: Use the log function below to debug and visualize your model
     """
 
-    n_epochs = 20
+    n_epochs = 2
     batch_size = 128
 
     trans = dense_transforms.Compose([
@@ -46,7 +46,8 @@ def train(args):
 
     w = torch.as_tensor(DENSE_CLASS_DISTRIBUTION)
     #  loss = torch.nn.CrossEntropyLoss().to(device)
-    loss = torch.nn.CrossEntropyLoss(weight=w / w.mean()).to(device)
+    # loss = torch.nn.CrossEntropyLoss(weight=w / w.mean()).to(device)
+    loss = torch.nn.BCEWithLogitsLoss()
 
     global_step = 0
     acc = []
@@ -71,13 +72,13 @@ def train(args):
             #print(output[0])
 
             # loss = ClassificationLoss()(output, labels.long())
-            # loss_val = loss(output, labels)
-            focal = torchvision.ops.sigmoid_focal_loss(output, labels, reduction='mean')
+            loss_val = loss(output, labels)
+            # focal = torchvision.ops.sigmoid_focal_loss(output, labels, reduction='mean')
             # print(focal)
 
             optimizer.zero_grad()
-            focal.backward()
-            # loss_val.backward()
+            # focal.backward()
+            loss_val.backward()
 
             # confusionMatrix.add(output.argmax(1).detach().cpu(), labels.detach().cpu())
 

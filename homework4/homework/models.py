@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import math
-from . import dense_transforms
+from . import dense_transforms 
 
 
 class ClassificationLoss(torch.nn.Module):
@@ -74,8 +74,13 @@ def extract_peak(heatmap, max_pool_ks=7, min_score=-5, max_det=100):
     # print(out)
     # print(mask)
 
+
     res = torch.masked_select(hm, mask)
-    res = torch.where(res > min_score, res, 0)
+    
+    zer = float(0)
+    # print(type(zer))
+    # print(res)
+    res = torch.where(res > min_score, 1.0,  zer)
     res2 = hm.masked_fill(mask == 0, 0.0)
     # res2 = torch.where(res2 > min_score, res2, 0)
 
