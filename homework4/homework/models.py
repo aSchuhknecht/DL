@@ -78,7 +78,7 @@ def extract_peak(heatmap, max_pool_ks=7, min_score=-5, max_det=100):
     res2 = hm.masked_fill(mask == 0, 0.0)
     # res2 = torch.where(res2 > min_score, res2, 0)
 
-    num_max = torch.count_nonzero(res).numpy().item()
+    num_max = torch.count_nonzero(res).cpu().numpy().item()
     if num_max > max_det:
         num_max = max_det
     # print(num_max)
@@ -93,7 +93,7 @@ def extract_peak(heatmap, max_pool_ks=7, min_score=-5, max_det=100):
         cx = indices1[i] % num_cols
         cy = indices1[i] // num_cols
 
-        tup = (values1[i].detach().numpy().item(), cx.detach().numpy().item(), cy.detach().numpy().item())
+        tup = (values1[i].detach().cpu().numpy().item(), cx.detach().cpu().numpy().item(), cy.detach().cpu().numpy().item())
         # tup = (values1[i], cx, cy)
         scores.append(tup)
 
@@ -227,6 +227,7 @@ class Detector(torch.nn.Module):
         image = image[None]
         result = self.forward(image)
         result = result.squeeze()
+        # print("here")
 
         t1 = extract_peak(result[0, :, :], max_det=30)
         t2 = extract_peak(result[1, :, :], max_det=30)
