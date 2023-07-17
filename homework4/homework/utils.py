@@ -2,6 +2,8 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from . import dense_transforms
 
+DENSE_CLASS_DISTRIBUTION = [0.02929112, 0.0044619, 0.00411153]
+
 
 class DetectionSuperTuxDataset(Dataset):
     def __init__(self, dataset_path, transform=dense_transforms.ToTensor(), min_size=20):

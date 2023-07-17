@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 from .models import Detector, save_model, ClassificationLoss
-from .utils import load_detection_data
+from .utils import load_detection_data, DENSE_CLASS_DISTRIBUTION
 from . import dense_transforms
 import torch.utils.tensorboard as tb
 import torchvision
@@ -25,9 +25,8 @@ def train(args):
     Hint: Use the log function below to debug and visualize your model
     """
 
-    n_epochs = 5
+    n_epochs = 20
     batch_size = 128
-    loss = torch.nn.CrossEntropyLoss().to(device)
 
     trans = dense_transforms.Compose([
         dense_transforms.ColorJitter(0.9, 0.9, 0.9, 0.1),
@@ -42,8 +41,12 @@ def train(args):
 
 
     #  optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-3)
     # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=30)
+
+    w = torch.as_tensor(DENSE_CLASS_DISTRIBUTION)
+    #  loss = torch.nn.CrossEntropyLoss().to(device)
+    loss = torch.nn.CrossEntropyLoss(weight=w / w.mean()).to(device)
 
     global_step = 0
     acc = []
@@ -55,7 +58,7 @@ def train(args):
 
         model.train()
         # confusionMatrix = ConfusionMatrix()
-        for step, (data, labels, sz) in enumerate(train_dataloader):
+        for data, labels, sz in train_dataloader:
             data, labels = data.to(device), labels.to(device)
 
             output = model(data)
@@ -64,11 +67,13 @@ def train(args):
             # print(output.argmax(1))
             # print(labels)
             # print(o)
+            # res = model.detect(data[0])
+            #print(output[0])
 
             # loss = ClassificationLoss()(output, labels.long())
             # loss_val = loss(output, labels)
             focal = torchvision.ops.sigmoid_focal_loss(output, labels, reduction='mean')
-            print(focal)
+            # print(focal)
 
             optimizer.zero_grad()
             focal.backward()
