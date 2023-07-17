@@ -34,14 +34,24 @@ def extract_peak(heatmap, max_pool_ks=7, min_score=-5, max_det=100):
        @return: List of peaks [(score, cx, cy), ...], where cx, cy are the position of a peak and score is the
                 heatmap value at the peak. Return no more than max_det peaks per image
     """
+
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
     pad = math.floor(max_pool_ks/2)
 
     hm = heatmap[None, None]
+    hm = hm.to(device)
+
     out = F.max_pool2d(hm, max_pool_ks, padding=(pad, pad), stride=1)
+    out = out.to(device)
+
     out = torch.squeeze(out)
 
     hm_flat = heatmap.flatten()
     out_flat = out.flatten()
+
+    hm_flat = hm_flat.to(device)
+    out_flat = out_flat.to(device)
 
     num_max = 0
     for i in range(0, hm_flat.size(0)):

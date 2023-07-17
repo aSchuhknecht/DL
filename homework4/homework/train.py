@@ -13,7 +13,7 @@ def train(args):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     print(device)
 
-    model = Detector()
+    model = Detector().to(device)
     train_logger, valid_logger = None, None
     if args.log_dir is not None:
         train_logger = tb.SummaryWriter(path.join(args.log_dir, 'train'), flush_secs=1)
