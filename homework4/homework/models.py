@@ -148,7 +148,7 @@ class Detector(torch.nn.Module):
                 c += skip_layer_size[i]
         # self.classifier = torch.nn.Conv2d(c, n_output_channels, 1)
         self.classifier = torch.nn.Sequential(torch.nn.Conv2d(c, n_output_channels, 1),
-                                              torch.nn.Sigmoid())
+                                           torch.nn.Sigmoid())
 
     def forward(self, x):
         z = (x - self.input_mean[None, :, None, None].to(x.device)) / self.input_std[None, :, None, None].to(x.device)
@@ -186,7 +186,7 @@ class Detector(torch.nn.Module):
 
         result = self.forward(image)
         result = result.squeeze()
-        # print("here")
+        
 
         t1 = extract_peak(result[0, :, :], max_det=30)
         t2 = extract_peak(result[1, :, :], max_det=30)
@@ -203,6 +203,7 @@ class Detector(torch.nn.Module):
             tup = t3[i] + (0.0, 0.0)
             r3.append(tup)
 
+        print(r2)
         return r1, r2, r3
 
         # raise NotImplementedError('Detector.detect')
