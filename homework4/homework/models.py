@@ -1,5 +1,27 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
+import math
+
+
+class ClassificationLoss(torch.nn.Module):
+    def forward(self, input, target):
+        """
+        Your code here
+
+        Compute mean(-log(softmax(input)_label))
+
+        @input:  torch.Tensor((B,C))
+        @target: torch.Tensor((B,), dtype=torch.int64)
+
+        @return:  torch.Tensor((,))  # hi2
+
+        Hint: Don't be too fancy, this is a one-liner
+        """
+        loss = torch.nn.CrossEntropyLoss()
+
+        return loss(input, target)
+        # raise NotImplementedError('ClassificationLoss.forward')
 
 
 def extract_peak(heatmap, max_pool_ks=7, min_score=-5, max_det=100):
@@ -12,17 +34,119 @@ def extract_peak(heatmap, max_pool_ks=7, min_score=-5, max_det=100):
        @return: List of peaks [(score, cx, cy), ...], where cx, cy are the position of a peak and score is the
                 heatmap value at the peak. Return no more than max_det peaks per image
     """
-    raise NotImplementedError('extract_peak')
+
+    pad = math.floor(max_pool_ks/2)
+
+    hm = heatmap[None, None]
+    out = F.max_pool2d(hm, max_pool_ks, padding=(pad, pad), stride=1)
+    out = torch.squeeze(out)
+
+    hm_flat = heatmap.flatten()
+    out_flat = out.flatten()
+
+    num_max = 0
+    for i in range(0, hm_flat.size(0)):
+        if hm_flat[i] != out_flat[i] or out_flat[i] <= min_score:
+            out_flat[i] = float('-inf')
+        else:
+            num_max = num_max + 1
+
+    # print(num_max)
+    if num_max > max_det:
+        num_max = max_det
+    values, indices = torch.topk(out_flat, num_max)
+
+    values,  indices = values.numpy(), indices.numpy()
+
+    num_cols = heatmap.size(1)
+
+    scores = []
+    for i in range(0, num_max):
+        cx = indices[i] % num_cols
+        cy = indices[i] // num_cols
+
+        tup = (values[i], cx, cy)
+        scores.append(tup)
+
+    return scores
+    # raise NotImplementedError('extract_peak')
 
 
 class Detector(torch.nn.Module):
-    def __init__(self):
+
+    class DownBlock(torch.nn.Module):
+        def __init__(self, n_input, n_output, stride=1):
+            super().__init__()
+            self.net = torch.nn.Sequential(
+                torch.nn.Conv2d(n_input, n_output, kernel_size=(7, 7), padding=3, stride=(stride, stride)),
+                torch.nn.BatchNorm2d(n_output),
+                torch.nn.ReLU()
+            )
+            self.downsample = None
+            if n_input != n_output or stride != 1:
+                self.downsample = torch.nn.Sequential(torch.nn.Conv2d(n_input, n_output, kernel_size=(1, 1), stride=(stride, stride)),
+                                                      torch.nn.BatchNorm2d(n_output))
+
+        def forward(self, x):
+            identity = x
+            if self.downsample is not None:
+                identity = self.downsample(identity)
+            return self.net(x) + identity
+            # return self.net(x)
+
+    class UpBlock(torch.nn.Module):
+        def __init__(self, n_input, n_output, stride=1):
+            super().__init__()
+            self.net = torch.nn.Sequential(
+                torch.nn.ConvTranspose2d(n_input, n_output, kernel_size=(7, 7), padding=(3, 3), stride =(stride, stride), output_padding=(1,1)),
+                torch.nn.BatchNorm2d(n_output),
+                torch.nn.ReLU()
+            )
+            self.downsample = None
+            if n_input != n_output or stride != 1:
+                self.downsample = torch.nn.Sequential(torch.nn.ConvTranspose2d(n_input, n_output, kernel_size=(1, 1), stride=(stride, stride), output_padding=(1,1)),
+                                                      torch.nn.BatchNorm2d(n_output))
+
+        def forward(self, x):
+            identity = x
+            if self.downsample is not None:
+                identity = self.downsample(identity)
+            return self.net(x) + identity
+            # return self.net(x)
+
+    def __init__(self, layers=None, n_input_channels=3):
         """
            Your code here.
            Setup your detection network
         """
         super().__init__()
-        raise NotImplementedError('Detector.__init__')
+
+        if layers is None:
+            layers = [32, 64, 128]
+
+        down_layers = [32, 64, 128]
+        up_layers = [64, 32, 5]
+
+        L = []
+        c = 3
+        for lay in down_layers:
+            L.append(self.DownBlock(c, lay, stride=2))
+            c = lay
+        for lay in up_layers:
+            L.append(self.UpBlock(c, lay, stride=2))
+            c = lay
+
+        self.network = torch.nn.Sequential(*L)
+
+        self.downBlock1 = self.DownBlock(3, 32, stride=2)
+        self.downBlock2 = self.DownBlock(32, 64, stride=2)
+        self.downBlock3 = self.DownBlock(64, 128, stride=2)
+
+        self.UpBlock1 = self.UpBlock(128, 64, stride=2)
+        self.UpBlock2 = self.UpBlock(64 * 2, 32, stride=2)
+        self.UpBlock3 = self.UpBlock(32 * 2, 3, stride=2)
+
+        # raise NotImplementedError('Detector.__init__')
 
     def forward(self, x):
         """
@@ -30,7 +154,29 @@ class Detector(torch.nn.Module):
            Implement a forward pass through the network, use forward for training,
            and detect for detection
         """
-        raise NotImplementedError('Detector.forward')
+
+        d1_in = x.size()
+        d1 = self.downBlock1(x)  # output of  first downConv
+
+        d2_in = d1.size()
+        d2 = self.downBlock2(d1)  # output of 2nd downConv
+
+        d3_in = d2.size()
+        d3 = self.downBlock3(d2)  # output of 3rd downConv
+
+        u1 = self.UpBlock1(d3)
+        u1 = u1[:, :, :d3_in[2], :d3_in[3]]
+        u1 = torch.cat((u1, d2), dim=1)  # skip connection
+
+        u2 = self.UpBlock2(u1)
+        u2 = u2[:, :, :d2_in[2], :d2_in[3]]
+        u2 = torch.cat((u2, d1), dim=1)  # skip connection
+
+        u3 = self.UpBlock3(u2)
+        u3 = u3[:, :, :d1_in[2], :d1_in[3]]
+
+        return torch.nn.Sigmoid(u3)
+        # raise NotImplementedError('Detector.forward')
 
     def detect(self, image):
         """
@@ -45,7 +191,17 @@ class Detector(torch.nn.Module):
                  scalar. Otherwise pytorch might keep a computation graph in the background and your program will run
                  out of memory.
         """
-        raise NotImplementedError('Detector.detect')
+
+        result = self.forward(image)
+        t1 = extract_peak(result[0], max_det=30)
+
+
+        t2 = extract_peak(result[1], max_det=30)
+        t3 = extract_peak(result[2], max_det=30)
+
+        return extract_peak(result[0]), extract_peak(result[1]), extract_peak(result[2])
+
+        # raise NotImplementedError('Detector.detect')
 
 
 def save_model(model):
