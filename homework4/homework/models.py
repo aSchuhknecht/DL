@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import math
+from . import dense_transforms
 
 
 class ClassificationLoss(torch.nn.Module):
@@ -104,110 +105,65 @@ def extract_peak(heatmap, max_pool_ks=7, min_score=-5, max_det=100):
 
 class Detector(torch.nn.Module):
 
-    class DownBlock(torch.nn.Module):
-        def __init__(self, n_input, n_output, stride=1):
+    class Block(torch.nn.Module):
+        def __init__(self, n_input, n_output, kernel_size=3, stride=2):
             super().__init__()
-            self.net = torch.nn.Sequential(
-                torch.nn.Conv2d(n_input, n_output, kernel_size=(7, 7), padding=3, stride=(stride, stride)),
-                torch.nn.BatchNorm2d(n_output),
-                torch.nn.ReLU()
-            )
-            self.downsample = None
-            if n_input != n_output or stride != 1:
-                self.downsample = torch.nn.Sequential(torch.nn.Conv2d(n_input, n_output, kernel_size=(1, 1), stride=(stride, stride)),
-                                                      torch.nn.BatchNorm2d(n_output))
+            self.c1 = torch.nn.Conv2d(n_input, n_output, kernel_size=kernel_size, padding=kernel_size // 2,
+                                      stride=stride, bias=False)
+            self.c2 = torch.nn.Conv2d(n_output, n_output, kernel_size=kernel_size, padding=kernel_size // 2, bias=False)
+            self.c3 = torch.nn.Conv2d(n_output, n_output, kernel_size=kernel_size, padding=kernel_size // 2, bias=False)
+            self.b1 = torch.nn.BatchNorm2d(n_output)
+            self.b2 = torch.nn.BatchNorm2d(n_output)
+            self.b3 = torch.nn.BatchNorm2d(n_output)
+            self.skip = torch.nn.Conv2d(n_input, n_output, kernel_size=1, stride=stride)
 
         def forward(self, x):
-            identity = x
-            if self.downsample is not None:
-                identity = self.downsample(identity)
-            return self.net(x) + identity
-            # return self.net(x)
+            return F.relu(self.b3(self.c3(F.relu(self.b2(self.c2(F.relu(self.b1(self.c1(x)))))))) + self.skip(x))
 
     class UpBlock(torch.nn.Module):
-        def __init__(self, n_input, n_output, stride=1):
+        def __init__(self, n_input, n_output, kernel_size=3, stride=2):
             super().__init__()
-            self.net = torch.nn.Sequential(
-                torch.nn.ConvTranspose2d(n_input, n_output, kernel_size=(7, 7), padding=(3, 3), stride =(stride, stride), output_padding=(1,1)),
-                torch.nn.BatchNorm2d(n_output),
-                torch.nn.ReLU()
-            )
-            self.downsample = None
-            if n_input != n_output or stride != 1:
-                self.downsample = torch.nn.Sequential(torch.nn.ConvTranspose2d(n_input, n_output, kernel_size=(1, 1), stride=(stride, stride), output_padding=(1,1)),
-                                                      torch.nn.BatchNorm2d(n_output))
+            self.c1 = torch.nn.ConvTranspose2d(n_input, n_output, kernel_size=kernel_size, padding=kernel_size // 2,
+                                               stride=stride, output_padding=1)
 
         def forward(self, x):
-            identity = x
-            if self.downsample is not None:
-                identity = self.downsample(identity)
-            return self.net(x) + identity
-            # return self.net(x)
+            return F.relu(self.c1(x))
 
-    def __init__(self, layers=None, n_input_channels=3):
-        """
-           Your code here.
-           Setup your detection network
-        """
+    def __init__(self, layers=[16, 32, 64, 128], n_output_channels=3, kernel_size=3, use_skip=True):
         super().__init__()
+        self.input_mean = torch.Tensor([0.2788, 0.2657, 0.2629])
+        self.input_std = torch.Tensor([0.2064, 0.1944, 0.2252])
 
-        if layers is None:
-            layers = [32, 64, 128]
-
-        down_layers = [32, 64, 128]
-        up_layers = [64, 32, 5]
-
-        L = []
         c = 3
-        for lay in down_layers:
-            L.append(self.DownBlock(c, lay, stride=2))
-            c = lay
-        for lay in up_layers:
-            L.append(self.UpBlock(c, lay, stride=2))
-            c = lay
-
-        self.network = torch.nn.Sequential(*L)
-
-        self.downBlock1 = self.DownBlock(3, 32, stride=2)
-        self.downBlock2 = self.DownBlock(32, 64, stride=2)
-        self.downBlock3 = self.DownBlock(64, 128, stride=2)
-
-        self.UpBlock1 = self.UpBlock(128, 64, stride=2)
-        self.UpBlock2 = self.UpBlock(64 * 2, 32, stride=2)
-        self.UpBlock3 = self.UpBlock(32 * 2, 3, stride=2)
-
-        # raise NotImplementedError('Detector.__init__')
+        self.use_skip = use_skip
+        self.n_conv = len(layers)
+        skip_layer_size = [3] + layers[:-1]
+        for i, l in enumerate(layers):
+            self.add_module('conv%d' % i, self.Block(c, l, kernel_size, 2))
+            c = l
+        for i, l in list(enumerate(layers))[::-1]:
+            self.add_module('upconv%d' % i, self.UpBlock(c, l, kernel_size, 2))
+            c = l
+            if self.use_skip:
+                c += skip_layer_size[i]
+        self.classifier = torch.nn.Conv2d(c, n_output_channels, 1)
 
     def forward(self, x):
-        """
-           Your code here.
-           Implement a forward pass through the network, use forward for training,
-           and detect for detection
-        """
+        z = (x - self.input_mean[None, :, None, None].to(x.device)) / self.input_std[None, :, None, None].to(x.device)
+        up_activation = []
+        for i in range(self.n_conv):
+            # Add all the information required for skip connections
+            up_activation.append(z)
+            z = self._modules['conv%d' % i](z)
 
-        d1_in = x.size()
-        d1 = self.downBlock1(x)  # output of  first downConv
-
-        d2_in = d1.size()
-        d2 = self.downBlock2(d1)  # output of 2nd downConv
-
-        d3_in = d2.size()
-        d3 = self.downBlock3(d2)  # output of 3rd downConv
-
-        u1 = self.UpBlock1(d3)
-        u1 = u1[:, :, :d3_in[2], :d3_in[3]]
-        u1 = torch.cat((u1, d2), dim=1)  # skip connection
-
-        u2 = self.UpBlock2(u1)
-        u2 = u2[:, :, :d2_in[2], :d2_in[3]]
-        u2 = torch.cat((u2, d1), dim=1)  # skip connection
-
-        u3 = self.UpBlock3(u2)
-        u3 = u3[:, :, :d1_in[2], :d1_in[3]]
-
-        return u3
-        # return torch.nn.Sigmoid(u3)
-        # raise NotImplementedError('Detector.forward')
+        for i in reversed(range(self.n_conv)):
+            z = self._modules['upconv%d' % i](z)
+            # Fix the padding
+            z = z[:, :, :up_activation[i].size(2), :up_activation[i].size(3)]
+            # Add the skip connection
+            if self.use_skip:
+                z = torch.cat([z, up_activation[i]], dim=1)
+        return self.classifier(z)
 
     def detect(self, image):
         """
@@ -225,6 +181,7 @@ class Detector(torch.nn.Module):
         self.eval()
 
         image = image[None]
+
         result = self.forward(image)
         result = result.squeeze()
         # print("here")
