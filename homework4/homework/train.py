@@ -5,6 +5,7 @@ from .models import Detector, save_model, ClassificationLoss
 from .utils import load_detection_data
 from . import dense_transforms
 import torch.utils.tensorboard as tb
+import torchvision
 
 
 def train(args):
@@ -47,6 +48,8 @@ def train(args):
     global_step = 0
     acc = []
     iou = []
+    alpha = 0.25
+    gamma = 2
 
     for epoch in range(0, n_epochs):
 
@@ -64,10 +67,14 @@ def train(args):
             # print(o)
 
             # loss = ClassificationLoss()(output, labels.long())
-            loss_val = loss(output, labels)
+            # loss_val = loss(output, labels)
+            p = torch.sigmoid(output)
+            focal = -alpha * (1 - p) ** gamma * torch.log(p)
+            print(focal)
 
             optimizer.zero_grad()
-            loss_val.backward()
+            focal.backward()
+            # loss_val.backward()
 
             # confusionMatrix.add(output.argmax(1).detach().cpu(), labels.detach().cpu())
 
