@@ -184,7 +184,6 @@ class Detector(torch.nn.Module):
                  scalar. Otherwise pytorch might keep a computation graph in the background and your program will run
                  out of memory.
         """
-        self.eval()
 
         image = image[None]
         result = self.forward(image)
@@ -196,13 +195,13 @@ class Detector(torch.nn.Module):
 
         r1, r2, r3 = [], [], []
         for i in range(0, len(t1)):
-            tup = t1[i] + (0.0, 0.0)
+            tup = t1[i] + (0, 0)
             r1. append(tup)
         for i in range(0, len(t2)):
-            tup = t2[i] + (0.0, 0.0)
+            tup = t2[i] + (0, 0)
             r2.append(tup)
         for i in range(0, len(t3)):
-            tup = t3[i] + (0.0, 0.0)
+            tup = t3[i] + (0, 0)
             r3.append(tup)
 
         return r1, r2, r3

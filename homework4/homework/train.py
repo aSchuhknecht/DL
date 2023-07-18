@@ -69,16 +69,15 @@ def train(args):
             # print(labels)
             # print(o)
             # res = model.detect(data[0])
-            #print(output[0])
 
             # loss = ClassificationLoss()(output, labels.long())
-            loss_val = loss(output, labels)
-            # focal = torchvision.ops.sigmoid_focal_loss(output, labels, reduction='mean')
-            # print(focal)
+            # loss_val = loss(output, labels)
+            focal = torchvision.ops.sigmoid_focal_loss(output, labels, reduction='sum')
+            print(focal)
 
             optimizer.zero_grad()
-            # focal.backward()
-            loss_val.backward()
+            focal.backward()
+            # loss_val.backward()
 
             # confusionMatrix.add(output.argmax(1).detach().cpu(), labels.detach().cpu())
 
