@@ -25,7 +25,7 @@ def train(args):
     Hint: Use the log function below to debug and visualize your model
     """
 
-    n_epochs = 10
+    n_epochs = 20
     batch_size = 128
 
     trans = dense_transforms.Compose([
