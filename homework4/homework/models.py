@@ -149,8 +149,8 @@ class Detector(torch.nn.Module):
             c = l
             if self.use_skip:
                 c += skip_layer_size[i]
-        # self.classifier = torch.nn.Conv2d(c, n_output_channels, 1)
-        self.classifier = torch.nn.Sequential(torch.nn.Conv2d(c, n_output_channels, 1), torch.nn.Sigmoid())
+        self.classifier = torch.nn.Conv2d(c, n_output_channels, 1)
+        # self.classifier = torch.nn.Sequential(torch.nn.Conv2d(c, n_output_channels, 1), torch.nn.Sigmoid())
 
     def forward(self, x):
         z = (x - self.input_mean[None, :, None, None].to(x.device)) / self.input_std[None, :, None, None].to(x.device)
@@ -187,7 +187,11 @@ class Detector(torch.nn.Module):
         image = image[None]
         result = self.forward(image)
 
+        sig = torch.nn.Sigmoid()
+        result = sig(result)
         result = result.squeeze()
+
+        # print(result)
 
         t1 = extract_peak(result[0, :, :], max_det=30)
         t2 = extract_peak(result[1, :, :], max_det=30)
@@ -251,7 +255,7 @@ if __name__ == '__main__':
             ax.add_patch(
                 patches.Rectangle((k[0] - 0.5, k[1] - 0.5), k[2] - k[0], k[3] - k[1], facecolor='none', edgecolor='b'))
         detections = model.detect(im.to(device))
-        print(detections)
+        # print(detections)
 
         for c in range(3):
             for s, cx, cy, w, h in detections[c]:
