@@ -74,23 +74,21 @@ def extract_peak(heatmap, max_pool_ks=7, min_score=-5, max_det=100):
     # print(out)
     # print(mask)
 
-
     res = torch.masked_select(hm, mask)
     
     zer = float(0)
     # print(type(zer))
     # print(res)
     res = torch.where(res > min_score, 1.0,  zer)
-    res2 = hm.masked_fill(mask == 0, 0.0)
+    res2 = hm.masked_fill(mask == 0, -100.0)
     # res2 = torch.where(res2 > min_score, res2, 0)
 
     num_max = torch.count_nonzero(res).cpu().numpy().item()
     if num_max > max_det:
         num_max = max_det
-    # print(num_max)
 
     values1, indices1 = torch.topk(res2.flatten(), num_max)
-    # print(indices1)
+    # print(values1)
 
     num_cols = heatmap.size(1)
 
@@ -151,8 +149,8 @@ class Detector(torch.nn.Module):
             c = l
             if self.use_skip:
                 c += skip_layer_size[i]
-        self.classifier = torch.nn.Conv2d(c, n_output_channels, 1)
-        # self.classifier = torch.nn.Sequential(torch.nn.Conv2d(c, n_output_channels, 1), torch.nn.Sigmoid())
+        # self.classifier = torch.nn.Conv2d(c, n_output_channels, 1)
+        self.classifier = torch.nn.Sequential(torch.nn.Conv2d(c, n_output_channels, 1), torch.nn.Sigmoid())
 
     def forward(self, x):
         z = (x - self.input_mean[None, :, None, None].to(x.device)) / self.input_std[None, :, None, None].to(x.device)
@@ -185,8 +183,10 @@ class Detector(torch.nn.Module):
                  out of memory.
         """
 
+        # print(image)
         image = image[None]
         result = self.forward(image)
+
         result = result.squeeze()
 
         t1 = extract_peak(result[0, :, :], max_det=30)
@@ -203,6 +203,8 @@ class Detector(torch.nn.Module):
         for i in range(0, len(t3)):
             tup = t3[i] + (0, 0)
             r3.append(tup)
+
+        # print(r1)
 
         return r1, r2, r3
 
@@ -249,7 +251,8 @@ if __name__ == '__main__':
             ax.add_patch(
                 patches.Rectangle((k[0] - 0.5, k[1] - 0.5), k[2] - k[0], k[3] - k[1], facecolor='none', edgecolor='b'))
         detections = model.detect(im.to(device))
-        # print(im)
+        print(detections)
+
         for c in range(3):
             for s, cx, cy, w, h in detections[c]:
                 ax.add_patch(patches.Circle((cx, cy), radius=max(2 + s / 2, 0.1), color='rgb'[c]))
