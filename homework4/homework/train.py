@@ -25,7 +25,7 @@ def train(args):
     Hint: Use the log function below to debug and visualize your model
     """
 
-    n_epochs = 25
+    n_epochs = 15
     batch_size = 128
 
     trans = dense_transforms.Compose([
@@ -57,6 +57,7 @@ def train(args):
 
     for epoch in range(0, n_epochs):
 
+        print(epoch)
         model.train()
         # confusionMatrix = ConfusionMatrix()
         for data, labels, sz in train_dataloader:
@@ -82,7 +83,7 @@ def train(args):
             # confusionMatrix.add(output.argmax(1).detach().cpu(), labels.detach().cpu())
 
             train_logger.add_scalar('loss', loss_val, global_step=global_step)
-            log(train_logger, data, labels, output, global_step)
+            # log(train_logger, data, labels, output, global_step)
 
             optimizer.step()
             global_step += 1
