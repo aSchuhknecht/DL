@@ -25,7 +25,7 @@ def train(args):
     Hint: Use the log function below to debug and visualize your model
     """
 
-    n_epochs = 15
+    n_epochs = 25
     batch_size = 128
 
     trans = dense_transforms.Compose([
@@ -41,7 +41,7 @@ def train(args):
 
 
     #  optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-3)
     # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=30)
 
     w = torch.as_tensor(DENSE_CLASS_DISTRIBUTION)
