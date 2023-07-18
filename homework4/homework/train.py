@@ -25,7 +25,7 @@ def train(args):
     Hint: Use the log function below to debug and visualize your model
     """
 
-    n_epochs = 2
+    n_epochs = 25
     batch_size = 128
 
     trans = dense_transforms.Compose([
@@ -71,17 +71,18 @@ def train(args):
             # res = model.detect(data[0])
 
             # loss = ClassificationLoss()(output, labels.long())
-            # loss_val = loss(output, labels)
-            focal = torchvision.ops.sigmoid_focal_loss(output, labels, reduction='sum')
-            print(focal)
+            loss_val = loss(output, labels)
+            # focal = torchvision.ops.sigmoid_focal_loss(output, labels, reduction='sum')
+            # print(focal)
 
             optimizer.zero_grad()
-            focal.backward()
-            # loss_val.backward()
+            # focal.backward()
+            loss_val.backward()
 
             # confusionMatrix.add(output.argmax(1).detach().cpu(), labels.detach().cpu())
 
-            train_logger.add_scalar('loss', float(1), global_step=global_step)
+            train_logger.add_scalar('loss', loss_val, global_step=global_step)
+            log(train_logger, data, labels, output, global_step)
 
             optimizer.step()
             global_step += 1
