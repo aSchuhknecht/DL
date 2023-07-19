@@ -187,8 +187,9 @@ class Detector(torch.nn.Module):
         image = image[None]
         result = self.forward(image)
 
-        sig = torch.nn.Sigmoid()
-        result = sig(result)
+        # sig = torch.nn.Sigmoid()
+        # result = sig(result)
+        result = torch.sigmoid(result)
         result = result.squeeze()
 
         # print(result)
