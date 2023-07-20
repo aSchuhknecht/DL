@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import os
 
 
 def spatial_argmax(logit):
@@ -121,6 +122,7 @@ if __name__ == '__main__':
         pytux.close()
 
 
+    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
     parser = ArgumentParser("Test the planner")
     parser.add_argument('track', nargs='+')
     parser.add_argument('-v', '--verbose', action='store_true')
