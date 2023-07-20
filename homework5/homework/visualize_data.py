@@ -3,11 +3,13 @@ from .utils import SuperTuxDataset
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
+import os
 
 
 def main(args):
     dataset = SuperTuxDataset(args.dataset)
 
+    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
     idxes = np.random.randint(len(dataset), size=args.N)
     f, axes = plt.subplots(1, args.N, figsize=(4 * args.N, 4))
 

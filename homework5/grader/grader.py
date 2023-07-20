@@ -1,4 +1,5 @@
 import sys
+import os
 
 
 class CheckFailed(Exception):
@@ -198,6 +199,7 @@ def load_assignment(name, f_out=sys.stdout, pre_import_fn=None):
 def run():
     import argparse
 
+    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
     parser = argparse.ArgumentParser('Grade your assignment')
     parser.add_argument('assignment', default='homework')
     parser.add_argument('-v', '--verbose', action='store_true')

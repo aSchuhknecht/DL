@@ -1,5 +1,6 @@
 import numpy as np
 import pystk
+import os
 
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms.functional as TF
@@ -168,6 +169,7 @@ if __name__ == '__main__':
                        vel + np.random.randn() * vel_noise)
 
 
+    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
     parser = ArgumentParser("Collects a dataset for the high-level planner")
     parser.add_argument('track', nargs='+')
     parser.add_argument('-o', '--output', default=DATASET_PATH)

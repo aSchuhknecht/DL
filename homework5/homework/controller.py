@@ -1,4 +1,5 @@
 import pystk
+import os
 
 
 def control(aim_point, current_vel):
@@ -18,6 +19,30 @@ def control(aim_point, current_vel):
     Hint: You may want to use action.drift=True for wide turns (it will turn faster)
     """
 
+    # print(current_vel)
+
+    if current_vel < 18:
+        action.acceleration = 1
+    else:
+
+        action.acceleration = 0
+        action.brake = True
+
+    steer = aim_point[0]*3
+    if steer < -1.0:
+        steer = -1.0
+    if steer > 1.0:
+        steer = 1.0
+
+    action.steer = steer
+
+
+    # sharp turns
+    if abs(aim_point[0]) > 0.25:
+        action.drift = 1
+    else:
+        action.drift = 0
+
     return action
 
 
@@ -33,7 +58,7 @@ if __name__ == '__main__':
             print(steps, how_far)
         pytux.close()
 
-
+    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
     parser = ArgumentParser()
     parser.add_argument('track', nargs='+')
     parser.add_argument('-v', '--verbose', action='store_true')
