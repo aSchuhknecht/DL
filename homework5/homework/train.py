@@ -22,7 +22,7 @@ def train(args):
     Hint: Use the log function below to debug and visualize your model
     """
 
-    n_epochs = 10
+    n_epochs = 20
     batch_size = 128
 
     trans = dense_transforms.Compose([
@@ -46,8 +46,8 @@ def train(args):
             data, labels = data.to(device), labels.to(device)
 
             output = model(data)
-            print(output)
-            print(labels)
+            # print(output)
+            # print(labels)
 
             loss_val = loss(output, labels)
 
