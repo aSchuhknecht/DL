@@ -1,9 +1,10 @@
-from .planner import Planner, save_model 
+from .planner import Planner, save_model
 import torch
 import torch.utils.tensorboard as tb
 import numpy as np
 from .utils import load_data
 from . import dense_transforms
+import random
 
 
 def train(args):
@@ -22,7 +23,7 @@ def train(args):
     Hint: Use the log function below to debug and visualize your model
     """
 
-    n_epochs = 20
+    n_epochs = 40
     batch_size = 128
 
     trans = dense_transforms.Compose([
@@ -32,7 +33,8 @@ def train(args):
     ])
 
     train_dataloader = load_data('drive_data', num_workers=0, batch_size=128, transform=trans)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=3)
     loss = torch.nn.MSELoss()
 
     global_step = 0
@@ -41,15 +43,19 @@ def train(args):
 
         print(epoch)
         model.train()
-        # confusionMatrix = ConfusionMatrix()
+
+        losses = []
         for data, labels in train_dataloader:
             data, labels = data.to(device), labels.to(device)
 
+            perm = torch.randperm(batch_size)
+            data = data[perm]
+            labels = labels[perm]
+
             output = model(data)
-            # print(output)
-            # print(labels)
 
             loss_val = loss(output, labels)
+            print(loss_val)
 
             optimizer.zero_grad()
             loss_val.backward()
@@ -57,8 +63,11 @@ def train(args):
             train_logger.add_scalar('loss', loss_val, global_step=global_step)
             # log(train_logger, data, labels, output, global_step)
 
+            losses.append(loss_val.detach().cpu().numpy())
             optimizer.step()
             global_step += 1
+
+        scheduler.step(np.mean(losses))
 
     save_model(model)
 
@@ -75,9 +84,9 @@ def log(logger, img, label, pred, global_step):
     import torchvision.transforms.functional as TF
     fig, ax = plt.subplots(1, 1)
     ax.imshow(TF.to_pil_image(img[0].cpu()))
-    WH2 = np.array([img.size(-1), img.size(-2)])/2
-    ax.add_artist(plt.Circle(WH2*(label[0].cpu().detach().numpy()+1), 2, ec='g', fill=False, lw=1.5))
-    ax.add_artist(plt.Circle(WH2*(pred[0].cpu().detach().numpy()+1), 2, ec='r', fill=False, lw=1.5))
+    WH2 = np.array([img.size(-1), img.size(-2)]) / 2
+    ax.add_artist(plt.Circle(WH2 * (label[0].cpu().detach().numpy() + 1), 2, ec='g', fill=False, lw=1.5))
+    ax.add_artist(plt.Circle(WH2 * (pred[0].cpu().detach().numpy() + 1), 2, ec='r', fill=False, lw=1.5))
     logger.add_figure('viz', fig, global_step)
     del ax, fig
 

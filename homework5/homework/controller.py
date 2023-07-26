@@ -21,7 +21,7 @@ def control(aim_point, current_vel):
 
     # print(current_vel)
 
-    if current_vel < 18:
+    if current_vel < 23:
         action.acceleration = 1
     else:
 
@@ -38,7 +38,7 @@ def control(aim_point, current_vel):
 
 
     # sharp turns
-    if abs(aim_point[0]) > 0.25:
+    if abs(aim_point[0]) > 0.21:
         action.drift = 1
     else:
         action.drift = 0
