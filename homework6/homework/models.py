@@ -13,7 +13,8 @@ class LanguageModel(object):
         :param some_text: A string containing characters in utils.vocab, may be an empty string!
         :return: torch.Tensor((len(utils.vocab), len(some_text)+1)) of log-probabilities
         """
-        raise NotImplementedError('Abstract function LanguageModel.predict_all')
+
+        # raise NotImplementedError('Abstract function LanguageModel.predict_all')
 
     def predict_next(self, some_text):
         """
@@ -71,12 +72,21 @@ class TCN(torch.nn.Module, LanguageModel):
             :param kernel_size: Conv1d parameter
             :param dilation: Conv1d parameter
             """
-            raise NotImplementedError('CausalConv1dBlock.__init__')
+            super().__init__()
+            self.net = torch.nn.Sequential(
+                torch.nn.ConstantPad1d((2*dilation, 0), 0),
+                torch.nn.Conv1d(in_channels, out_channels, kernel_size=kernel_size, dilation=dilation),
+                torch.nn.ReLU()
+            )
+
+            # raise NotImplementedError('CausalConv1dBlock.__init__')
 
         def forward(self, x):
-            raise NotImplementedError('CausalConv1dBlock.forward')
 
-    def __init__(self):
+            return self.net(x)
+            # raise NotImplementedError('CausalConv1dBlock.forward')
+
+    def __init__(self, layers=None):
         """
         Your code here
 
@@ -84,7 +94,23 @@ class TCN(torch.nn.Module, LanguageModel):
         Hint: The probability of the first character should be a parameter
         use torch.nn.Parameter to explicitly create it.
         """
-        raise NotImplementedError('TCN.__init__')
+        super().__init__()
+        if layers is None:
+            layers = [32, 64, 128]
+
+        L = []
+        c = len(utils.vocab)
+        total_dilaton = 1
+
+        for lay in layers:
+            L.append(self.CausalConv1dBlock(c, lay, 3, total_dilaton))
+            c = lay
+            total_dilaton *= 2
+
+        self.network = torch.nn.Sequential(*L)
+        self.classifier = torch.nn.Conv1d(c, len(utils.vocab), 1)
+
+        # raise NotImplementedError('TCN.__init__')
 
     def forward(self, x):
         """
@@ -94,7 +120,17 @@ class TCN(torch.nn.Module, LanguageModel):
         @x: torch.Tensor((B, vocab_size, L)) a batch of one-hot encodings
         @return torch.Tensor((B, vocab_size, L+1)) a batch of log-likelihoods or logits
         """
-        raise NotImplementedError('TCN.forward')
+        # print(x.size())
+        res = self.network(x)
+        y = self.classifier(res)
+
+        first = torch.rand(res.size(0), len(utils.vocab))
+        first = first[:, :, None]
+
+        res = torch.cat((first, y), 2)
+
+        return res
+        # raise NotImplementedError('TCN.forward')
 
     def predict_all(self, some_text):
         """
@@ -103,7 +139,10 @@ class TCN(torch.nn.Module, LanguageModel):
         @some_text: a string
         @return torch.Tensor((vocab_size, len(some_text)+1)) of log-likelihoods (not logits!)
         """
-        raise NotImplementedError('TCN.predict_all')
+        x = self.forward(utils.one_hot(some_text)[None, :, :])
+        m = torch.nn.LogSoftmax(dim=1)
+        return torch.squeeze(m(x))
+        # raise NotImplementedError('TCN.predict_all')
 
 
 def save_model(model):

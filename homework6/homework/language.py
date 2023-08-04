@@ -1,5 +1,6 @@
-from .models import LanguageModel, AdjacentLanguageModel, Bigram, load_model
+from .models import LanguageModel, AdjacentLanguageModel, Bigram, load_model, TCN
 from . import utils
+import torch
 
 
 def log_likelihood(model: LanguageModel, some_text: str):
@@ -14,7 +15,24 @@ def log_likelihood(model: LanguageModel, some_text: str):
     :param some_text:
     :return: float
     """
-    raise NotImplementedError('log_likelihood')
+
+    pred = model.predict_all(some_text)
+    pred = pred[:, :len(some_text)]
+    mask = utils.one_hot(some_text)
+    result = torch.masked_select(pred, mask.bool())
+
+    return torch.sum(result)
+    # raise NotImplementedError('log_likelihood')
+
+
+def avg_log_likelihood(model: LanguageModel, some_text: str):
+
+    pred = model.predict_all(some_text)
+    pred = pred[:, :len(some_text)]
+    mask = utils.one_hot(some_text)
+    result = torch.masked_select(pred, mask.bool())
+
+    return torch.mean(result)
 
 
 def sample_random(model: LanguageModel, max_length: int = 100):
@@ -28,7 +46,26 @@ def sample_random(model: LanguageModel, max_length: int = 100):
     :param max_length: The maximum sentence length
     :return: A string
     """
-    raise NotImplementedError('sample_random')
+    s = str()
+    length = 0
+    stop = 0
+
+    while length < max_length and not stop:
+
+        pred = model.predict_all(s)
+        if pred.size()[1] > 1:
+            pred = pred[:, -1]
+
+        m = torch.distributions.Categorical(logits=pred.squeeze())
+        next = utils.vocab[m.sample()]
+        s = s + next
+
+        length += 1
+        if next == '.':
+            break
+
+    return s
+    # raise NotImplementedError('sample_random')
 
 
 class TopNHeap:
@@ -51,7 +88,7 @@ class TopNHeap:
         from heapq import heappush, heapreplace
         if len(self.elements) < self.N:
             heappush(self.elements, e)
-        elif self.elements[0] < e:
+        elif self.elements[0][0] < e[0]:
             heapreplace(self.elements, e)
 
 
@@ -71,7 +108,48 @@ def beam_search(model: LanguageModel, beam_size: int, n_results: int = 10, max_l
                                    This option favors longer strings.
     :return: A list of strings of size n_results
     """
-    raise NotImplementedError('beam_search')
+    from heapq import heappush, heapreplace, heappop
+
+    heaps = []
+    heaps.append(TopNHeap(beam_size))
+    heaps[0].add((-100.0, ""))
+    complete = TopNHeap(n_results)
+
+    for k in range(1, max_length + 1):
+
+        heaps.append(TopNHeap(beam_size))
+        for j in heaps[k - 1].elements:
+
+            s = j[1]
+            if len(s) > 0 and s[-1] == '.':
+                # heaps[k].add(j)
+                continue
+
+            for i in range(0, len(utils.vocab)):
+
+                temp = s + utils.vocab[i]
+                if average_log_likelihood:
+                    score = avg_log_likelihood(model, temp)
+                else:
+                    score = log_likelihood(model, temp)
+
+                tup = (score.item(), temp)
+                if utils.vocab[i] == '.':
+                    complete.add(tup)
+                heaps[k].add(tup)
+
+    res = []
+    # for it in range(len(heaps[max_length].elements) - n_results):
+    #     heappop(heaps[max_length].elements)
+    #
+    # for it in range(0, n_results):
+    #     res.append(heappop(heaps[max_length].elements)[1])
+
+    for it in range(0, n_results):
+        res.append(heappop(complete.elements)[1])
+
+    return res
+    #raise NotImplementedError('beam_search')
 
 
 if __name__ == "__main__":
@@ -90,14 +168,23 @@ if __name__ == "__main__":
         print(s, float(log_likelihood(lm, s)))
     print()
 
+
     for i in range(10):
         s = sample_random(lm)
         print(s, float(log_likelihood(lm, s)) / len(s))
     print()
 
-    for s in beam_search(lm, 100):
-        print(s, float(log_likelihood(lm, s)) / len(s))
+    for s in beam_search(lm, 100, max_length=4):
+        # print(s, float(log_likelihood(lm, s)) / len(s))
+        print(s, float(log_likelihood(lm, s)))
     print()
 
-    for s in beam_search(lm, 100, average_log_likelihood=True):
-        print(s, float(log_likelihood(lm, s)) / len(s))
+    tcn = TCN()
+    i = 0
+    input = torch.zeros(len(utils.vocab), 100)
+    input[:, i] = float('NaN')
+
+    one_hot = (torch.randint(len(utils.vocab), (1, 1, 10)) == torch.arange(len(utils.vocab))[None, :, None]).float()
+    output = TCN(one_hot)
+    # print(input[None, None].size())
+    output = tcn(input[None])[0]
